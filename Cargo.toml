@@ -1,0 +1,19 @@
+[package]
+name = "rtlsdr"
+version = "0.1.0"
+edition = "2021"
+authors = ["Fabian Lippold <fabianlippold1184@gmail.com>"]
+description = "High-level rust bindings for librtlsdr"
+repository = "https://github.com/Fabus1184/rtlsdr-rs"
+homepage = "https://github.com/Fabus1184/rtlsdr-rs"
+readme = "README.md"
+keywords = ["SDR", "rtlsdr"]
+license = "GPL-3.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "rtlsdr"
+path = "src/lib.rs"
+
+[dependencies]
