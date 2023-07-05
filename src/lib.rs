@@ -132,6 +132,14 @@ pub struct Device {
     dev: *mut sys::rtlsdr_dev,
 }
 
+impl Drop for Device {
+    fn drop(&mut self) {
+        if !self.dev.is_null() {
+            self.close().expect("Failed to close device");
+        }
+    }
+}
+
 impl Device {
     /// Open device
     /// This may fail due to a libusb error or some other unspecified error
@@ -562,8 +570,6 @@ impl Device {
     }
 
     /// Read data synchronously
-    /// librtlsdr states this errors "on error or error code from libusb"
-    /// so we assume it's a libusb error
     pub fn read_sync(&self, buf: &mut [u8]) -> Result<i32, RtlsdrError> {
         let mut n_read = 0;
 
