@@ -590,7 +590,7 @@ impl Device {
     /// @param cb callback function to return received samples
     /// @param ctx user specific context to pass via the callback function
     #[deprecated]
-    pub fn wait_async<F, U>(&mut self, cb: F, ctx: &mut U) -> Result<(), String>
+    pub fn wait_async<F, U>(&self, cb: F, ctx: &mut U) -> Result<(), String>
     where
         F: FnMut(*mut u8, u32, &mut U),
     {
@@ -606,7 +606,7 @@ impl Device {
     /// @param buf_len optional buffer length, must be multiple of 512,
     /// should be a multiple of 16384 (URB size), set to 0 for default buffer length (16 * 32 * 512)
     pub fn read_async<F, U>(
-        &mut self,
+        &self,
         cb: F,
         ctx: &mut U,
         buf_num: u32,
@@ -640,7 +640,7 @@ impl Device {
     /// Cancel all pending asynchronous operations on the device.
     /// Due to incomplete concurrency implementation, this should only be called from within the callback function, so it is
     /// in the correct thread.
-    pub fn cancel_async(&mut self) -> Result<(), String> {
+    pub fn cancel_async(&self) -> Result<(), String> {
         rtlsdr_result!(sys::rtlsdr_cancel_async(self.dev))
             .map_err(|e| format!("Failed to cancel async: {}", e))?;
 
