@@ -1,3 +1,5 @@
+use std::ptr::null_mut;
+
 mod sys;
 
 macro_rules! rtlsdr_result {
@@ -130,14 +132,6 @@ pub enum DirectSamplingThreshold {
 pub struct Device {
     index: u32,
     dev: *mut sys::rtlsdr_dev,
-}
-
-impl Drop for Device {
-    fn drop(&mut self) {
-        if !self.dev.is_null() {
-            self.close().expect("Failed to close device");
-        }
-    }
 }
 
 impl Device {
@@ -590,45 +584,36 @@ impl Device {
     /// @param cb callback function to return received samples
     /// @param ctx user specific context to pass via the callback function
     #[deprecated]
-    pub fn wait_async<F, U>(&self, cb: F, ctx: &mut U) -> Result<(), String>
+    pub fn wait_async<F>(&self, cb: F) -> Result<(), String>
     where
-        F: FnMut(*mut u8, u32, &mut U),
+        F: FnMut(*mut u8, u32),
     {
-        self.read_async(cb, ctx, 0, 0)
+        self.read_async(cb, 0, 0)
     }
 
     /// Read samples from the device asynchronously.
     /// This function will block until it is being canceled using rtlsdr_cancel_async()
     /// @param cb callback function to return received samples
-    /// @param ctx user specific context to pass via the callback function
     /// @param buf_num optional buffer count, buf_num * buf_len = overall buffer size
     /// set to 0 for default buffer count (15)
     /// @param buf_len optional buffer length, must be multiple of 512,
     /// should be a multiple of 16384 (URB size), set to 0 for default buffer length (16 * 32 * 512)
-    pub fn read_async<F, U>(
-        &self,
-        cb: F,
-        ctx: &mut U,
-        buf_num: u32,
-        buf_len: u32,
-    ) -> Result<(), String>
+    pub fn read_async<F>(&self, cb: F, buf_num: u32, buf_len: u32) -> Result<(), String>
     where
-        F: FnMut(*mut u8, u32, &mut U),
+        F: FnMut(*mut u8, u32),
     {
-        unsafe extern "C" fn _cb<F, U>(buf: *mut u8, len: u32, ctx: *mut std::ffi::c_void)
+        unsafe extern "C" fn _cb<F>(buf: *mut u8, len: u32, ctx: *mut std::ffi::c_void)
         where
-            F: FnMut(*mut u8, u32, &mut U),
+            F: FnMut(*mut u8, u32),
         {
-            let (cb, ctx) = &mut *(ctx as *mut (F, &mut U));
-            cb(buf, len, *ctx);
+            let cb = &mut *(ctx as *mut F);
+            cb(buf, len);
         }
-
-        let mut _ctx = (cb, ctx);
 
         rtlsdr_result!(sys::rtlsdr_read_async(
             self.dev,
-            Some(_cb::<F, U>),
-            &mut _ctx as *mut (F, &mut U) as *mut std::ffi::c_void,
+            Some(_cb::<F>),
+            null_mut(),
             buf_num,
             buf_len
         ))
