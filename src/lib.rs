@@ -134,6 +134,8 @@ pub struct Device {
     dev: *mut sys::rtlsdr_dev,
 }
 
+unsafe impl Send for Device {}
+
 impl Device {
     /// Open device
     /// This may fail due to a libusb error or some other unspecified error
