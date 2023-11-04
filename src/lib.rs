@@ -598,7 +598,7 @@ impl Device {
     /// set to 0 for default buffer count (15)
     /// @param buf_len optional buffer length, must be multiple of 512,
     /// should be a multiple of 16384 (URB size), set to 0 for default buffer length (16 * 32 * 512)
-    pub fn read_async<F>(&self, cb: F, buf_num: u32, buf_len: u32) -> Result<(), String>
+    pub fn read_async<F>(&self, mut cb: F, buf_num: u32, buf_len: u32) -> Result<(), String>
     where
         F: FnMut(*mut u8, u32),
     {
@@ -613,7 +613,7 @@ impl Device {
         rtlsdr_result!(sys::rtlsdr_read_async(
             self.dev,
             Some(_cb::<F>),
-            null_mut(),
+            &mut cb as *mut F as *mut std::ffi::c_void,
             buf_num,
             buf_len
         ))
