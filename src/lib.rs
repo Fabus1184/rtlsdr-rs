@@ -1,5 +1,3 @@
-use std::ptr::null_mut;
-
 mod sys;
 
 macro_rules! rtlsdr_result {
@@ -127,7 +125,7 @@ pub enum DirectSamplingThreshold {
     QBelow = 4,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// Device struct
 pub struct Device {
     index: u32,
@@ -138,8 +136,7 @@ impl Device {
     /// Open device
     /// This may fail due to a libusb error or some other unspecified error
     pub fn open(&mut self) -> Result<(), RtlsdrError> {
-        rtlsdr_result!(sys::rtlsdr_open(&mut self.dev, self.index))
-            .map_err(|e| Into::<RtlsdrError>::into(e))?;
+        rtlsdr_result!(sys::rtlsdr_open(&mut self.dev, self.index))?;
 
         Ok(())
     }
@@ -244,7 +241,7 @@ impl Device {
     pub fn write_eeprom(&mut self, offset: u8, buf: &mut [u8]) -> Result<(), String> {
         rtlsdr_result!(sys::rtlsdr_write_eeprom(
             self.dev,
-            buf.as_mut_ptr() as *mut u8,
+            buf.as_mut_ptr(),
             offset,
             buf.len() as u16
         ))
@@ -450,8 +447,7 @@ impl Device {
             buf.as_mut_ptr() as *mut std::ffi::c_void,
             buf.len() as i32,
             &mut n_read
-        ))
-        .map_err(|e| Into::<RtlsdrError>::into(e))?;
+        ))?;
 
         Ok(n_read)
     }
@@ -464,7 +460,7 @@ impl Device {
     #[deprecated]
     pub fn wait_async<F>(&self, cb: F) -> Result<(), String>
     where
-        F: FnMut(*mut u8, u32),
+        F: FnMut(Vec<u8>),
     {
         self.read_async(cb, 0, 0)
     }
@@ -478,14 +474,16 @@ impl Device {
     /// should be a multiple of 16384 (URB size), set to 0 for default buffer length (16 * 32 * 512)
     pub fn read_async<F>(&self, mut cb: F, buf_num: u32, buf_len: u32) -> Result<(), String>
     where
-        F: FnMut(*mut u8, u32),
+        F: FnMut(Vec<u8>),
     {
         unsafe extern "C" fn _cb<F>(buf: *mut u8, len: u32, ctx: *mut std::ffi::c_void)
         where
-            F: FnMut(*mut u8, u32),
+            F: FnMut(Vec<u8>),
         {
             let cb = &mut *(ctx as *mut F);
-            cb(buf, len);
+            let mut vec = Vec::with_capacity(len as usize);
+            (0..len).for_each(|i| vec.push(*buf.offset(i as isize)));
+            cb(vec);
         }
 
         rtlsdr_result!(sys::rtlsdr_read_async(

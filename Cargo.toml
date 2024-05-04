@@ -1,6 +1,6 @@
 [package]
 name = "rtlsdr-full"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 authors = ["Fabian Lippold <fabianlippold1184@gmail.com>"]
 description = "High-level rust bindings for librtlsdr"
